@@ -1,43 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>videx</title>
+    <title>VIDEX - главная страница</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; }
-        #messages { border: 1px solid #ccc; height: 400px; overflow-y: auto; padding: 10px; margin-bottom: 10px; }
+        /* Мягкий «телеграмный» фон */
+        body {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            font-family: sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #chat {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        input {
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+
+        button {
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background: #2196f3;
+            color: white;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <h1>Videx - главная страница</h1>
-    <div id="messages"></div>
-    <input type="text" id="message-input" placeholder="Сообщение..." />
-    <button id="send-btn">Отправить</button>
-
+    <div id="chat">
+        <div id="messages"></div>
+        <input type="text" id="messageText" autocomplete="off"/>
+        <button onclick="sendMessage()">Отправить</button>
+    </div>
     <script>
-        const username = prompt("Как тебя зовут?") || "Гость";
-// Добавляем проверку на протокол и четкий путь
-        const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";   
-        const ws = new WebSocket(protocol + window.location.host + "/ws/" + username);
-
-        ws.onopen = () => console.log("Соединение установлено!");
-        ws.onclose = () => console.log("Соединение закрыто!");
-        ws.onerror = (e) => console.error("Ошибка:", e);;
-
+        // Спросим ник при входе
+        const username = prompt("Как тебя называть?");
+        const ws = new WebSocket(`ws://${window.location.host}/ws/${username}`);
+        
         ws.onmessage = function(event) {
-            const messagesDiv = document.getElementById("messages");
-            const msg = document.createElement("div");
-            msg.textContent = event.data;
-            messagesDiv.appendChild(msg);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            var messages = document.getElementById('messages');
+            var message = document.createElement('div');
+            message.textContent = event.data;
+            messages.appendChild(message);
         };
 
-        document.getElementById("send-btn").onclick = function() {
-            const input = document.getElementById("message-input");
-            if (input.value.trim()) {
-                ws.send(input.value);
-                input.value = "";
-            }
-        };
+        function sendMessage() {
+            var input = document.getElementById("messageText");
+            ws.send(input.value);
+            input.value = '';
+        }
     </script>
 </body>
-</html>
+</html></html>
