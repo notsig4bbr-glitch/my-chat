@@ -15,7 +15,13 @@
 
     <script>
         const username = prompt("Как тебя зовут?") || "Гость";
-        const ws = new WebSocket(`ws://127.0.0.1:8000/ws/${username}`);
+// Добавляем проверку на протокол и четкий путь
+        const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";   
+        const ws = new WebSocket(protocol + window.location.host + "/ws/" + username);
+
+        ws.onopen = () => console.log("Соединение установлено!");
+        ws.onclose = () => console.log("Соединение закрыто!");
+        ws.onerror = (e) => console.error("Ошибка:", e);;
 
         ws.onmessage = function(event) {
             const messagesDiv = document.getElementById("messages");
