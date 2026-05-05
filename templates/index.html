@@ -55,9 +55,8 @@
         <input type="text" id="messageText" autocomplete="off"/>
         <button onclick="sendMessage()">Отправить</button>
     </div>
-    <script>
-        // Спросим ник при входе
-        const username = prompt("Как тебя называть?");
+     <script>
+        const username = prompt("Как тебя зовут?");
         const ws = new WebSocket(`ws://${window.location.host}/ws/${username}`);
         
         ws.onmessage = function(event) {
@@ -65,13 +64,24 @@
             var message = document.createElement('div');
             message.textContent = event.data;
             messages.appendChild(message);
+            // Автопрокрутка вниз к новому сообщению
+            messages.scrollTop = messages.scrollHeight;
         };
 
         function sendMessage() {
             var input = document.getElementById("messageText");
-            ws.send(input.value);
-            input.value = '';
+            if (input.value.trim() !== "") { // Проверка, чтобы не слать пустые
+                ws.send(input.value);
+                input.value = '';
+            }
         }
+
+        // Обработка нажатия Enter в поле ввода
+        document.getElementById("messageText").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
     </script>
 </body>
 </html></html>
