@@ -3,7 +3,6 @@
 <head>
     <title>VIDEX - главная страница</title>
     <style>
-        /* Мягкий «телеграмный» фон */
         body {
             background: linear-gradient(135deg, #e3f2fd, #bbdefb);
             font-family: sans-serif;
@@ -57,7 +56,6 @@
     </div>
      <script>
         const username = prompt("Как тебя зовут?");
-        // Заменяем ws:// на wss:// для работы через HTTPS
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
         
@@ -66,19 +64,17 @@
             var message = document.createElement('div');
             message.textContent = event.data;
             messages.appendChild(message);
-            // Автопрокрутка вниз к
             messages.scrollTop = messages.scrollHeight;
         };
 
         function sendMessage() {
             var input = document.getElementById("messageText");
-            if (input.value.trim() !== "") { // Проверка, чтобы не слать пустые
+            if (input.value.trim() !== "") { 
                 ws.send(input.value);
                 input.value = '';
             }
         }
 
-        // Обработка нажатия Enter в поле ввода
         document.getElementById("messageText").addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 sendMessage();
