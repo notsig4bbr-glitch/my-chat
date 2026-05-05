@@ -57,7 +57,9 @@
     </div>
      <script>
         const username = prompt("Как тебя зовут?");
-        const ws = new WebSocket(`ws://${window.location.host}/ws/${username}`);
+        // Заменяем ws:// на wss:// для работы через HTTPS
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
         
         ws.onmessage = function(event) {
             var messages = document.getElementById('messages');
