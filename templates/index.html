@@ -71,10 +71,9 @@
             background: #fafafa;
         }
 
-        #messageRow, #imageRow {
+        #messageRow {
             display: flex;
             gap: 8px;
-            margin-top: 8px;
         }
 
         #messageText {
@@ -114,10 +113,6 @@
             word-break: break-word;
         }
 
-        #imageInput {
-            display: none;
-        }
-
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -131,7 +126,7 @@
         }
 
         @media (max-width: 480px) {
-            #messageRow, #imageRow {
+            #messageRow {
                 flex-direction: column;
             }
 
@@ -150,11 +145,6 @@
             <div id="messageRow">
                 <input id="messageText" type="text" placeholder="Сообщение..." autocomplete="off">
                 <button onclick="sendMessage()">Отправить</button>
-            </div>
-
-            <div id="imageRow">
-                <input id="imageInput" type="file" accept="image/*">
-                <button onclick="sendImage()">🖼️ Картинка</button>
             </div>
         </div>
 
@@ -182,7 +172,7 @@
 
             const div = document.createElement("div");
             div.className = "msg";
-            div.innerHTML = data.split("|||").join("<br>");
+            div.textContent = data;
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
         };
@@ -215,32 +205,6 @@
             });
 
             userCount.textContent = users.length;
-        }
-
-        async function sendImage() {
-            const fileInput = document.getElementById("imageInput");
-            const file = fileInput.files[0];
-            if (!file) return;
-            if (ws.readyState !== WebSocket.OPEN) return;
-
-            const formData = new FormData();
-            formData.append("file", file);
-
-            try {
-                const response = await fetch("/upload", {
-                    method: "POST",
-                    body: formData
-                });
-                const result = await response.json();
-
-                if (result.image_b64) {
-                    ws.send("IMG:" + result.image_b64);
-                }
-            } catch (e) {
-                alert("Ошибка загрузки картинки");
-            }
-
-            fileInput.value = "";
         }
 
         input.addEventListener("keydown", (e) => {
