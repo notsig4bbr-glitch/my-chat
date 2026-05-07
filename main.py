@@ -6,7 +6,7 @@ from datetime import datetime
 
 app = FastAPI()
 
-# База данных: user (ник), text (сообщение), time (время)
+# База данных: text (сообщение), time (время)
 db = sqlite3.connect("chat.db", check_same_thread=False)
 db.execute("CREATE TABLE IF NOT EXISTS messages (user TEXT, text TEXT, time TEXT)")
 db.commit()
