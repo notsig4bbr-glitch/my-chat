@@ -180,10 +180,9 @@
                 return;
             }
 
-            const parts = data.split("|||");
             const div = document.createElement("div");
             div.className = "msg";
-            div.innerHTML = parts.join("<br>");
+            div.innerHTML = data.split("|||").join("<br>");
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
         };
