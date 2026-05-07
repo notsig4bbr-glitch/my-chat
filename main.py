@@ -1,10 +1,10 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.responses import HTMLResponse
-from starlette.websockets import WebSocketState
 import sqlite3
 import os
 from datetime import datetime
 import base64
+from starlette.websockets import WebSocketState
 
 app = FastAPI()
 
@@ -47,19 +47,19 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
     active_connections.append(websocket)
     active_users[websocket] = username
 
-    cursor = db.cursor()
-    cursor.execute("SELECT user, text, time, image FROM messages ORDER BY rowid ASC")
-    rows = cursor.fetchall()
-
-    for user, text, time_str, image in rows:
-        parts = [f"[{time_str}] {user}: {text}"]
-        if image:
-            parts.append(f"<img src='data:image/png;base64,{image}' style='max-width:100%;border-radius:10px;margin-top:5px;'>")
-        await websocket.send_text("|||".join(parts))
-
-    await broadcast_users()
-
     try:
+        cursor = db.cursor()
+        cursor.execute("SELECT user, text, time, image FROM messages ORDER BY rowid ASC")
+        rows = cursor.fetchall()
+
+        for user, text, time_str, image in rows:
+            parts = [f"[{time_str}] {user}: {text}"]
+            if image:
+                parts.append(f"<img src='data:image/png;base64,{image}' style='max-width:100%;border-radius:10px;margin-top:5px;'>")
+            await websocket.send_text("|||".join(parts))
+
+        await broadcast_users()
+
         while True:
             data = await websocket.receive_text()
             current_time = datetime.now().strftime("%H:%M")
@@ -83,7 +83,6 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
                     (username, text_content, current_time, image_b64)
                 )
                 db.commit()
-
                 msg = f"[{current_time}] {username}: {text_content}|||<img src='data:image/png;base64,{image_b64}' style='max-width:100%;border-radius:10px;margin-top:5px;'>"
             else:
                 db.execute(
