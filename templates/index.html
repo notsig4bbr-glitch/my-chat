@@ -16,10 +16,16 @@
             box-sizing: border-box;
         }
 
-        #chat {
+        .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 900px;
             height: 90vh;
+            display: flex;
+            gap: 16px;
+        }
+
+        #chat {
+            flex: 1;
             background: white;
             border-radius: 16px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.12);
@@ -27,6 +33,32 @@
             flex-direction: column;
             padding: 16px;
             box-sizing: border-box;
+        }
+
+        #users-panel {
+            width: 220px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        #users-panel h3 {
+            margin: 0 0 12px 0;
+            color: #2196f3;
+        }
+
+        #user-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #user-list li {
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+            word-break: break-word;
         }
 
         #messages {
@@ -81,12 +113,19 @@
             word-break: break-word;
         }
 
-        @media (max-width: 480px) {
-            #chat {
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
                 height: 95vh;
-                padding: 12px;
             }
 
+            #users-panel {
+                width: 100%;
+                order: 2;
+            }
+        }
+
+        @media (max-width: 480px) {
             #messageRow {
                 flex-direction: column;
             }
@@ -98,13 +137,20 @@
     </style>
 </head>
 <body>
-    <div id="chat">
-        <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить историю</button>
-        <div id="messages"></div>
+    <div class="container">
+        <div id="chat">
+            <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить историю</button>
+            <div id="messages"></div>
 
-        <div id="messageRow">
-            <input id="messageText" type="text" placeholder="Сообщение..." autocomplete="off">
-            <button onclick="sendMessage()">Отправить</button>
+            <div id="messageRow">
+                <input id="messageText" type="text" placeholder="Сообщение..." autocomplete="off">
+                <button onclick="sendMessage()">Отправить</button>
+            </div>
+        </div>
+
+        <div id="users-panel">
+            <h3>👥 Онлайн (<span id="userCount">0</span>)</h3>
+            <ul id="user-list"></ul>
         </div>
     </div>
 
@@ -117,9 +163,16 @@
         const input = document.getElementById("messageText");
 
         ws.onmessage = (event) => {
+            const data = event.data;
+
+            if (data.startsWith("USERS:")) {
+                updateUsersList(data.slice(6));
+                return;
+            }
+
             const div = document.createElement("div");
             div.className = "msg";
-            div.textContent = event.data;
+            div.textContent = data;
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
         };
@@ -137,6 +190,21 @@
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send("/clear");
             }
+        }
+
+        function updateUsersList(usersString) {
+            const users = usersString.split(",").filter(u => u.trim());
+            const userList = document.getElementById("user-list");
+            const userCount = document.getElementById("userCount");
+
+            userList.innerHTML = "";
+            users.forEach(user => {
+                const li = document.createElement("li");
+                li.textContent = user;
+                userList.appendChild(li);
+            });
+
+            userCount.textContent = users.length;
         }
 
         input.addEventListener("keydown", (e) => {
