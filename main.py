@@ -1,18 +1,23 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, File, UploadFile, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 import sqlite3
 import os
 from datetime import datetime
+from PIL import Image
+import io
+import base64
 
 app = FastAPI()
 
+# Папка для картинок (не нужна, используем base64)
+os.makedirs("uploads", exist_ok=True)
+
 # База данных
 db = sqlite3.connect("chat.db", check_same_thread=False)
-db.execute("CREATE TABLE IF NOT EXISTS messages (user TEXT, text TEXT, time TEXT)")
+db.execute("CREATE TABLE IF NOT EXISTS messages (user TEXT, text TEXT, time TEXT, image BLOB)")
 db.commit()
 
-# Словарь активных пользователей
-active_users = {}  # {websocket: username}
+active_users = {}
 active_connections = []
 
 @app.get("/")
@@ -26,19 +31,40 @@ async def clear_history():
     db.commit()
     return {"message": "История удалена!"}
 
+# API для загрузки картинок
+@app.post("/upload")
+async def upload_image(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+        return {"error": "Только картинки!"}
+    
+    contents = await file.read()
+    image = Image.open(io.BytesIO(contents))
+    
+    # Сжимаем до 400x400
+    image.thumbnail((400, 400), Image.Resampling.LANCZOS)
+    
+    buffer = io.BytesIO()
+    image.save(buffer, format='PNG')
+    image_data = buffer.getvalue()
+    
+    return {"image_b64": base64.b64encode(image_data).decode()}
+
 @app.websocket("/ws/{username}")
 async def websocket_endpoint(websocket: WebSocket, username: str):
     await websocket.accept()
     active_connections.append(websocket)
     active_users[websocket] = username
     
-    # Загрузка истории
+    # Загрузка истории с картинками
     cursor = db.cursor()
-    cursor.execute("SELECT user, text, time FROM messages")
-    for row in cursor.fetchall():
-        await websocket.send_text(f"[{row[2]}] {row[0]}: {row[1]}")
+    cursor.execute("SELECT user, text, time, image FROM messages ORDER BY rowid DESC LIMIT 100")
+    for row in reversed(cursor.fetchall()):
+        msg_parts = [f"[{row[2]}] {row[0]}: {row[1]}"]
+        if row[3]:
+            img_src = f"data:image/png;base64,{base64.b64decode(row[3]).decode()}"
+            msg_parts.append(f"<img src='{img_src}' style='max-width:100%;border-radius:10px;margin-top:5px;'>")
+        await websocket.send_text("|||".join(msg_parts))
     
-    # Отправляем список активных пользователей ВСЕМ
     await broadcast_users()
     
     try:
@@ -47,39 +73,56 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             
             current_time = datetime.now().strftime("%H:%M")
             
-            # Команда очистки
             if data == '/clear':
                 db.execute("DELETE FROM messages")
                 db.commit()
-                for conn in active_connections[:]:  # Копируем список
+                for conn in active_connections[:]:
                     try:
                         await conn.send_text("🗑️ История чата очищена!")
                     except:
                         pass
                 continue
             
-            # Обычное сообщение
-            db.execute("INSERT INTO messages (user, text, time) VALUES (?, ?, ?)", (username, data, current_time))
+            image_data = None
+            text_content = data
+            
+            # Если картинка
+            if data.startswith("IMG:"):
+                image_b64 = data[4:]
+                image_data = base64.b64encode(base64.b64decode(image_b64)).decode()
+                text_content = "🖼️ Картинка"
+            
+            # Сохраняем
+            db.execute("INSERT INTO messages (user, text, time, image) VALUES (?, ?, ?, ?)", 
+                      (username, text_content, current_time, image_data))
             db.commit()
             
-            for connection in active_connections[:]:  # Копируем список
+            # Формируем сообщение для отправки
+            msg_parts = [f"[{current_time}] {username}: {text_content}"]
+            if image_data:
+                img_src = f"data:image/png;base64,{image_data}"
+                msg_parts.append(f"<img src='{img_src}' style='max-width:100%;border-radius:10px;margin-top:5px;'>")
+            
+            final_msg = "|||".join(msg_parts)
+            
+            for conn in active_connections[:]:
                 try:
-                    await connection.send_text(f"[{current_time}] {username}: {data}")
+                    await conn.send_text(final_msg)
                 except:
                     pass
                     
-    except:
-        active_connections.remove(websocket)
+    except WebSocketDisconnect:
+        if websocket in active_connections:
+            active_connections.remove(websocket)
         if websocket in active_users:
             del active_users[websocket]
-        await broadcast_users()  # Обновляем список при отключении
+        await broadcast_users()
 
-# АСИНХРОННАЯ функция рассылки списка пользователей
 async def broadcast_users():
-    users_list = [active_users.get(conn, '') for conn in active_connections if conn in active_users]
+    users_list = list(set(active_users.get(conn, '') for conn in active_connections if conn in active_users))
     users_json = f"USERS:{','.join(users_list)}"
     
-    for conn in active_connections[:]:  # Копируем список
+    for conn in active_connections[:]:
         try:
             await conn.send_text(users_json)
         except:
