@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Videx</title>
+    <title>Мой чат</title>
     <style>
-
+        /* Мягкий «телеграмный» фон */
         body {
             background: linear-gradient(135deg, #e3f2fd, #bbdefb);
             font-family: sans-serif;
@@ -26,11 +26,10 @@
             position: relative;
         }
 
-        /* Кнопка очистки */
         #clearBtn {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 20px;
+            left: -100px;  
             background: #2196f3;
             color: white;
             border: none;
@@ -38,7 +37,8 @@
             padding: 8px 12px;
             cursor: pointer;
             font-size: 12px;
-        }
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
+        }  
         #clearBtn:hover {
             background: #1976d2;
         }
@@ -78,7 +78,7 @@
         <button onclick="sendMessage()">Отправить</button>
     </div>
     <script>
-        const username = prompt("Как тебя называтьь?");
+        const username = prompt("Как тебя зовут?");
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
         
@@ -98,12 +98,14 @@
             }
         }
 
+        // Функция очистки истории
         function clearHistory() {
             var messages = document.getElementById('messages');
-            messages.innerHTML = ''; 
-            ws.send('/clear'); 
+            messages.innerHTML = ''; // Очищаем на фронте
+            ws.send('/clear'); // Отправляем команду серверу
         }
 
+        // Enter для отправки
         document.getElementById("messageText").addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 sendMessage();
