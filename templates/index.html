@@ -110,4 +110,94 @@
             #chat {
                 max-width: none;
                 margin-bottom: 10px;
+            }
             
+            body {
+                padding: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #chat, #users-panel {
+                padding: 15px;
+            }
+            
+            #clearBtn {
+                left: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="chat">
+            <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить</button>
+            <div id="messages"></div>
+            <input type="text" id="messageText" autocomplete="off"/>
+            <button onclick="sendMessage()">Отправить</button>
+        </div>
+        
+        <div id="users-panel">
+            <h3>👥 Онлайн (<span id="userCount">0</span>)</h3>
+            <ul id="user-list"></ul>
+        </div>
+    </div>
+    <script>
+        const username = prompt("Как тебя зовут?");
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
+        
+        ws.onmessage = function(event) {
+            var data = event.data;
+            
+            if (data.startsWith("USERS:")) {
+                updateUsersList(data.slice(6));
+                return;
+            }
+            
+            var messages = document.getElementById('messages');
+            var message = document.createElement('div');
+            message.textContent = data;
+            messages.appendChild(message);
+            messages.scrollTop = messages.scrollHeight;
+        };
+
+        function updateUsersList(usersString) {
+            const users = usersString.split(',');
+            const userList = document.getElementById('user-list');
+            const userCount = document.getElementById('userCount');
+            
+            userList.innerHTML = '';
+            users.forEach(user => {
+                if (user.trim()) {
+                    var li = document.createElement('li');
+                    li.textContent = user;
+                    userList.appendChild(li);
+                }
+            });
+            
+            userCount.textContent = users.length;
+        }
+
+        function sendMessage() {
+            var input = document.getElementById("messageText");
+            if (input.value.trim() !== "") {
+                ws.send(input.value);
+                input.value = '';
+            }
+        }
+
+        function clearHistory() {
+            var messages = document.getElementById('messages');
+            messages.innerHTML = '';
+            ws.send('/clear');
+        }
+
+        document.getElementById("messageText").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
