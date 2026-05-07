@@ -99,75 +99,99 @@
         </div>
     </div>
     <script>
-        const username = prompt("Как тебя зовут?");
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
-        
-        ws.onmessage = function(event) {
-            const data = event.data;
-            
-            if (data.startsWith("USERS:")) {
-                updateUsersList(data.slice(6));
-                return;
-            }
-            
-            const parts = data.split("|||");
-            const messageDiv = document.createElement('div');
-            messageDiv.innerHTML = parts.join('<br>');
-            document.getElementById('messages').appendChild(messageDiv);
-            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-        };
+    const username = prompt("Как тебя зовут?");
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
 
-        function updateUsersList(usersString) {
-            const users = usersString.split(',').filter(u => u.trim());
-            const userList = document.getElementById('user-list');
-            const userCount = document.getElementById('userCount');
-            
-            userList.innerHTML = '';
-            users.forEach(user => {
-                const li = document.createElement('li');
-                li.textContent = user;
-                userList.appendChild(li);
-            });
-            userCount.textContent = users.length;
+    ws.onopen = function() {
+        console.log("WebSocket connected");
+    };
+
+    ws.onclose = function() {
+        console.log("WebSocket closed");
+    };
+
+    ws.onerror = function() {
+        console.log("WebSocket error");
+    };
+
+    ws.onmessage = function(event) {
+        const data = event.data;
+
+        if (data.startsWith("USERS:")) {
+            updateUsersList(data.slice(6));
+            return;
         }
 
-        function sendMessage() {
-            const input = document.getElementById("messageText");
-            if (input.value.trim()) {
-                ws.send(input.value.trim());
-                input.value = '';
+        const parts = data.split("|||");
+        const messageDiv = document.createElement('div');
+        messageDiv.innerHTML = parts.join('<br>');
+        document.getElementById('messages').appendChild(messageDiv);
+        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+    };
+
+    function sendMessage() {
+        const input = document.getElementById("messageText");
+        if (input.value.trim() && ws.readyState === WebSocket.OPEN) {
+            ws.send(input.value.trim());
+            input.value = '';
+        } else if (ws.readyState !== WebSocket.OPEN) {
+            alert("Соединение с чатом не открыто. Обнови страницу.");
+        }
+    }
+
+    async function uploadImage() {
+        const fileInput = document.getElementById('imageInput');
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/upload', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (result.image_b64 && ws.readyState === WebSocket.OPEN) {
+                ws.send('IMG:' + result.image_b64);
+            } else if (ws.readyState !== WebSocket.OPEN) {
+                alert("Соединение с чатом не открыто. Обнови страницу.");
             }
+        } catch (e) {
+            alert('Ошибка загрузки картинки');
         }
 
-        async function uploadImage() {
-            const fileInput = document.getElementById('imageInput');
-            const file = fileInput.files[0];
-            if (!file) return;
-            
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            try {
-                const response = await fetch('/upload', { method: 'POST', body: formData });
-                const result = await response.json();
-                if (result.image_b64) {
-                    ws.send('IMG:' + result.image_b64);
-                }
-            } catch (e) {
-                alert('Ошибка загрузки картинки');
-            }
-            fileInput.value = '';
-        }
+        fileInput.value = '';
+    }
 
-        function clearHistory() {
-            document.getElementById('messages').innerHTML = '';
+    function clearHistory() {
+        document.getElementById('messages').innerHTML = '';
+        if (ws.readyState === WebSocket.OPEN) {
             ws.send('/clear');
+        } else {
+            alert("Соединение с чатом не открыто. Обнови страницу.");
         }
+    }
 
-        document.getElementById("messageText").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") sendMessage();
+    function updateUsersList(usersString) {
+        const users = usersString.split(',').filter(u => u.trim());
+        const userList = document.getElementById('user-list');
+        const userCount = document.getElementById('userCount');
+
+        userList.innerHTML = '';
+        users.forEach(user => {
+            const li = document.createElement('li');
+            li.textContent = user;
+            userList.appendChild(li);
         });
-    </script>
+
+        userCount.textContent = users.length;
+    }
+
+    document.getElementById("messageText").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
+</script>
 </body>
 </html>
