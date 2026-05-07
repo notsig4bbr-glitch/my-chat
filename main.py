@@ -1,10 +1,10 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.responses import HTMLResponse
+from starlette.websockets import WebSocketState
 import sqlite3
 import os
 from datetime import datetime
 import base64
-from starlette.websockets import WebSocketState
 
 app = FastAPI()
 
