@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>VIDEX - главная страница</title>
+    <title>Videx</title>
     <style>
+
         body {
             background: linear-gradient(135deg, #e3f2fd, #bbdefb);
             font-family: sans-serif;
@@ -22,6 +23,24 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
+            position: relative;
+        }
+
+        /* Кнопка очистки */
+        #clearBtn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        #clearBtn:hover {
+            background: #1976d2;
         }
 
         #messages {
@@ -30,6 +49,7 @@
             margin-bottom: 10px;
             border-bottom: 1px solid #eee;
             padding-bottom: 10px;
+            padding-left: 10px;
         }
 
         input {
@@ -50,12 +70,15 @@
 </head>
 <body>
     <div id="chat">
+        <!-- Кнопка очистки истории -->
+        <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить</button>
+        
         <div id="messages"></div>
         <input type="text" id="messageText" autocomplete="off"/>
         <button onclick="sendMessage()">Отправить</button>
     </div>
-     <script>
-        const username = prompt("Как тебя зовут?");
+    <script>
+        const username = prompt("Как тебя называтьь?");
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
         
@@ -69,10 +92,16 @@
 
         function sendMessage() {
             var input = document.getElementById("messageText");
-            if (input.value.trim() !== "") { 
+            if (input.value.trim() !== "") {
                 ws.send(input.value);
                 input.value = '';
             }
+        }
+
+        function clearHistory() {
+            var messages = document.getElementById('messages');
+            messages.innerHTML = ''; 
+            ws.send('/clear'); 
         }
 
         document.getElementById("messageText").addEventListener("keypress", function(event) {
@@ -82,4 +111,4 @@
         });
     </script>
 </body>
-</html></html>
+</html>
