@@ -41,90 +41,42 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        #users-panel h3 {
-            margin-top: 0;
-            color: #2196f3;
-        }
-
-        #user-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        #user-list li {
-            padding: 5px 0;
-            font-size: 14px;
-        }
+        #users-panel h3 { margin-top: 0; color: #2196f3; }
+        #user-list { list-style: none; padding: 0; }
+        #user-list li { padding: 5px 0; font-size: 14px; }
 
         #clearBtn {
-            position: absolute;
-            top: 10px;
-            left: -100px;
-            background: #2196f3;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: absolute; top: 10px; left: -5px;
+            background: #2196f3; color: white; border: none;
+            border-radius: 8px; padding: 8px 12px; cursor: pointer;
+            font-size: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         #clearBtn:hover { background: #1976d2; }
 
         #messages {
-            flex-grow: 1;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-            padding-left: 20px;
+            flex-grow: 1; overflow-y: auto; margin-bottom: 10px;
+            border-bottom: 1px solid #eee; padding-bottom: 10px; padding-left: 20px;
         }
 
-        input {
-            padding: 10px;
-            border-radius: 10px;
-            border: 1px solid #ddd;
+        #message-inputs {
+            display: flex; gap: 5px; flex-wrap: wrap;
         }
 
-        button {
-            padding: 10px;
-            border-radius: 10px;
-            border: none;
-            background: #2196f3;
-            color: white;
-            cursor: pointer;
-        }
+        #messageText { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
+        button { padding: 10px; border-radius: 10px; border: none; background: #2196f3; color: white; cursor: pointer; }
 
-        /* АДАПТИВНОСТЬ ДЛЯ ТЕЛЕФОНОВ */
+        #imageInput { display: none; }
+
+        /* Адаптивность */
         @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-                padding: 10px;
-            }
-            
-            #users-panel {
-                width: 100%;
-                order: 2;
-            }
-            
-            #chat {
-                max-width: none;
-                margin-bottom: 10px;
-            }
-            
-            body {
-                padding: 10px;
-            }
+            .container { flex-direction: column; padding: 10px; }
+            #users-panel { width: 100%; order: 2; }
+            #chat { max-width: none; margin-bottom: 10px; }
+            body { padding: 10px; }
         }
-
         @media (max-width: 480px) {
-            #chat, #users-panel {
-                padding: 15px;
-            }
-            
-            #clearBtn {
-                left: 5px;
-            }
+            #chat, #users-panel { padding: 15px; }
+            #clearBtn { left: 5px; }
         }
     </style>
 </head>
@@ -133,8 +85,12 @@
         <div id="chat">
             <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить</button>
             <div id="messages"></div>
-            <input type="text" id="messageText" autocomplete="off"/>
-            <button onclick="sendMessage()">Отправить</button>
+            <div id="message-inputs">
+                <input type="text" id="messageText" autocomplete="off" placeholder="Сообщение..."/>
+                <button onclick="sendMessage()">📝</button>
+                <input type="file" id="imageInput" accept="image/*" onchange="uploadImage()"/>
+                <button onclick="document.getElementById('imageInput').click()">🖼️</button>
+            </div>
         </div>
         
         <div id="users-panel">
@@ -148,55 +104,69 @@
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
         
         ws.onmessage = function(event) {
-            var data = event.data;
+            const data = event.data;
             
             if (data.startsWith("USERS:")) {
                 updateUsersList(data.slice(6));
                 return;
             }
             
-            var messages = document.getElementById('messages');
-            var message = document.createElement('div');
-            message.textContent = data;
-            messages.appendChild(message);
-            messages.scrollTop = messages.scrollHeight;
+            const parts = data.split("|||");
+            const messageDiv = document.createElement('div');
+            messageDiv.innerHTML = parts.join('<br>');
+            document.getElementById('messages').appendChild(messageDiv);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
         };
 
         function updateUsersList(usersString) {
-            const users = usersString.split(',');
+            const users = usersString.split(',').filter(u => u.trim());
             const userList = document.getElementById('user-list');
             const userCount = document.getElementById('userCount');
             
             userList.innerHTML = '';
             users.forEach(user => {
-                if (user.trim()) {
-                    var li = document.createElement('li');
-                    li.textContent = user;
-                    userList.appendChild(li);
-                }
+                const li = document.createElement('li');
+                li.textContent = user;
+                userList.appendChild(li);
             });
-            
             userCount.textContent = users.length;
         }
 
         function sendMessage() {
-            var input = document.getElementById("messageText");
-            if (input.value.trim() !== "") {
-                ws.send(input.value);
+            const input = document.getElementById("messageText");
+            if (input.value.trim()) {
+                ws.send(input.value.trim());
                 input.value = '';
             }
         }
 
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageInput');
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (result.image_b64) {
+                    ws.send('IMG:' + result.image_b64);
+                }
+            } catch (e) {
+                alert('Ошибка загрузки картинки');
+            }
+            fileInput.value = '';
+        }
+
         function clearHistory() {
-            var messages = document.getElementById('messages');
-            messages.innerHTML = '';
+            document.getElementById('messages').innerHTML = '';
             ws.send('/clear');
         }
 
         document.getElementById("messageText").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                sendMessage();
-            }
+            if (event.key === "Enter") sendMessage();
         });
     </script>
 </body>
