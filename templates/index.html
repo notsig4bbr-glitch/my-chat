@@ -58,7 +58,7 @@
         #clearBtn {
             position: absolute;
             top: 10px;
-            left: -5px;
+            left: -100px;
             background: #2196f3;
             color: white;
             border: none;
@@ -110,20 +110,18 @@
         </div>
     </div>
     <script>
-        const username = prompt("Как тебя зовут?");
+        const username = prompt("Как тебя называть?");
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
         
         ws.onmessage = function(event) {
             var data = event.data;
             
-            // Обработка списка пользователей
             if (data.startsWith("USERS:")) {
-                updateUsersList(data.slice(6)); // Убираем "USERS:"
+                updateUsersList(data.slice(6)); 
                 return;
             }
             
-            // Обычное сообщение
             var messages = document.getElementById('messages');
             var message = document.createElement('div');
             message.textContent = data;
