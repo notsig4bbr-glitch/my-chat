@@ -56,9 +56,7 @@
             padding: 8px 12px;
             cursor: pointer;
             font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        #clearBtn:hover { background: #1976d2; }
 
         #messages {
             flex-grow: 1;
@@ -152,6 +150,18 @@
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${encodeURIComponent(username)}`);
 
+        ws.onopen = function() {
+            console.log("WebSocket connected");
+        };
+
+        ws.onclose = function() {
+            console.log("WebSocket closed");
+        };
+
+        ws.onerror = function() {
+            console.log("WebSocket error");
+        };
+
         ws.onmessage = function(event) {
             const data = event.data;
 
@@ -167,15 +177,10 @@
             document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
         };
 
-        ws.onclose = function() {
-            console.log("WebSocket closed");
-        };
-
         function sendMessage() {
             const input = document.getElementById("messageText");
             const text = input.value.trim();
             if (!text) return;
-
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send(text);
                 input.value = "";
@@ -230,9 +235,7 @@
         }
 
         document.getElementById("messageText").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                sendMessage();
-            }
+            if (event.key === "Enter") sendMessage();
         });
     </script>
 </body>
