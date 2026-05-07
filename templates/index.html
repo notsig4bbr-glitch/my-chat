@@ -1,241 +1,146 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Videx - Чат</title>
+    <title>Videx</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-            font-family: sans-serif;
             margin: 0;
-            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
             height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
             box-sizing: border-box;
         }
 
-        .container {
-            display: flex;
-            gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-            height: calc(100vh - 40px);
-        }
-
         #chat {
+            width: 100%;
+            max-width: 600px;
+            height: 90vh;
             background: white;
-            flex: 1;
-            max-width: 500px;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
             display: flex;
             flex-direction: column;
-            position: relative;
-        }
-
-        #users-panel {
-            background: white;
-            width: 200px;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        #users-panel h3 { margin-top: 0; color: #2196f3; }
-        #user-list { list-style: none; padding: 0; margin: 0; }
-        #user-list li { padding: 5px 0; font-size: 14px; }
-
-        #clearBtn {
-            position: absolute;
-            top: 10px;
-            left: -5px;
-            background: #2196f3;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 12px;
+            padding: 16px;
+            box-sizing: border-box;
         }
 
         #messages {
-            flex-grow: 1;
+            flex: 1;
             overflow-y: auto;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-            padding-left: 10px;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 12px;
+            background: #fafafa;
         }
 
-        #message-inputs {
+        #messageRow {
             display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
+            gap: 8px;
         }
 
         #messageText {
             flex: 1;
-            min-width: 120px;
-            padding: 10px;
-            border-radius: 10px;
+            padding: 12px;
             border: 1px solid #ddd;
+            border-radius: 10px;
+            outline: none;
         }
 
         button {
-            padding: 10px;
-            border-radius: 10px;
+            padding: 12px 14px;
             border: none;
+            border-radius: 10px;
             background: #2196f3;
             color: white;
             cursor: pointer;
         }
 
-        #imageInput {
-            display: none;
+        button:hover {
+            background: #1976d2;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-                padding: 10px;
-            }
+        #clearBtn {
+            margin-bottom: 10px;
+            width: fit-content;
+            font-size: 13px;
+            padding: 8px 12px;
+        }
 
-            #users-panel {
-                width: 100%;
-                order: 2;
-            }
-
-            #chat {
-                max-width: none;
-                margin-bottom: 10px;
-            }
-
-            body {
-                padding: 10px;
-            }
+        .msg {
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #eaeaea;
+            word-break: break-word;
         }
 
         @media (max-width: 480px) {
-            #chat, #users-panel {
-                padding: 15px;
+            #chat {
+                height: 95vh;
+                padding: 12px;
             }
 
-            #clearBtn {
-                left: 5px;
+            #messageRow {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="chat">
-            <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить</button>
-            <div id="messages"></div>
-            <div id="message-inputs">
-                <input type="text" id="messageText" autocomplete="off" placeholder="Сообщение...">
-                <button onclick="sendMessage()">📝</button>
-                <input type="file" id="imageInput" accept="image/*" onchange="uploadImage()">
-                <button onclick="document.getElementById('imageInput').click()">🖼️</button>
-            </div>
-        </div>
+    <div id="chat">
+        <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить историю</button>
+        <div id="messages"></div>
 
-        <div id="users-panel">
-            <h3>👥 Онлайн (<span id="userCount">0</span>)</h3>
-            <ul id="user-list"></ul>
+        <div id="messageRow">
+            <input id="messageText" type="text" placeholder="Сообщение..." autocomplete="off">
+            <button onclick="sendMessage()">Отправить</button>
         </div>
     </div>
 
     <script>
         const username = prompt("Как тебя зовут?") || "Guest";
-        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${encodeURIComponent(username)}`);
 
-        ws.onopen = function() {
-            console.log("WebSocket connected");
-        };
+        const messages = document.getElementById("messages");
+        const input = document.getElementById("messageText");
 
-        ws.onclose = function() {
-            console.log("WebSocket closed");
-        };
-
-        ws.onerror = function() {
-            console.log("WebSocket error");
-        };
-
-        ws.onmessage = function(event) {
-            const data = event.data;
-
-            if (data.startsWith("USERS:")) {
-                updateUsersList(data.slice(6));
-                return;
-            }
-
-            const parts = data.split("|||");
-            const wrapper = document.createElement("div");
-            wrapper.innerHTML = parts.join("<br>");
-            document.getElementById("messages").appendChild(wrapper);
-            document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+        ws.onmessage = (event) => {
+            const div = document.createElement("div");
+            div.className = "msg";
+            div.textContent = event.data;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
         };
 
         function sendMessage() {
-            const input = document.getElementById("messageText");
             const text = input.value.trim();
             if (!text) return;
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(text);
-                input.value = "";
-            }
-        }
-
-        async function uploadImage() {
-            const fileInput = document.getElementById("imageInput");
-            const file = fileInput.files[0];
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append("file", file);
-
-            try {
-                const response = await fetch("/upload", {
-                    method: "POST",
-                    body: formData
-                });
-                const result = await response.json();
-
-                if (result.image_b64 && ws.readyState === WebSocket.OPEN) {
-                    ws.send("IMG:" + result.image_b64);
-                }
-            } catch (e) {
-                alert("Ошибка загрузки картинки");
-            }
-
-            fileInput.value = "";
+            if (ws.readyState !== WebSocket.OPEN) return;
+            ws.send(text);
+            input.value = "";
         }
 
         function clearHistory() {
-            document.getElementById("messages").innerHTML = "";
+            messages.innerHTML = "";
             if (ws.readyState === WebSocket.OPEN) {
                 ws.send("/clear");
             }
         }
 
-        function updateUsersList(usersString) {
-            const users = usersString.split(",").filter(u => u.trim());
-            const userList = document.getElementById("user-list");
-            const userCount = document.getElementById("userCount");
-
-            userList.innerHTML = "";
-            users.forEach(user => {
-                const li = document.createElement("li");
-                li.textContent = user;
-                userList.appendChild(li);
-            });
-
-            userCount.textContent = users.length;
-        }
-
-        document.getElementById("messageText").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") sendMessage();
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") sendMessage();
         });
     </script>
 </body>
