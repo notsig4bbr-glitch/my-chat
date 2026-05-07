@@ -42,41 +42,89 @@
         }
 
         #users-panel h3 { margin-top: 0; color: #2196f3; }
-        #user-list { list-style: none; padding: 0; }
+        #user-list { list-style: none; padding: 0; margin: 0; }
         #user-list li { padding: 5px 0; font-size: 14px; }
 
         #clearBtn {
-            position: absolute; top: 10px; left: -5px;
-            background: #2196f3; color: white; border: none;
-            border-radius: 8px; padding: 8px 12px; cursor: pointer;
-            font-size: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: absolute;
+            top: 10px;
+            left: -5px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         #clearBtn:hover { background: #1976d2; }
 
         #messages {
-            flex-grow: 1; overflow-y: auto; margin-bottom: 10px;
-            border-bottom: 1px solid #eee; padding-bottom: 10px; padding-left: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            padding-left: 10px;
         }
 
         #message-inputs {
-            display: flex; gap: 5px; flex-wrap: wrap;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
         }
 
-        #messageText { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
-        button { padding: 10px; border-radius: 10px; border: none; background: #2196f3; color: white; cursor: pointer; }
+        #messageText {
+            flex: 1;
+            min-width: 120px;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
 
-        #imageInput { display: none; }
+        button {
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background: #2196f3;
+            color: white;
+            cursor: pointer;
+        }
 
-        /* Адаптивность */
+        #imageInput {
+            display: none;
+        }
+
         @media (max-width: 768px) {
-            .container { flex-direction: column; padding: 10px; }
-            #users-panel { width: 100%; order: 2; }
-            #chat { max-width: none; margin-bottom: 10px; }
-            body { padding: 10px; }
+            .container {
+                flex-direction: column;
+                padding: 10px;
+            }
+
+            #users-panel {
+                width: 100%;
+                order: 2;
+            }
+
+            #chat {
+                max-width: none;
+                margin-bottom: 10px;
+            }
+
+            body {
+                padding: 10px;
+            }
         }
+
         @media (max-width: 480px) {
-            #chat, #users-panel { padding: 15px; }
-            #clearBtn { left: 5px; }
+            #chat, #users-panel {
+                padding: 15px;
+            }
+
+            #clearBtn {
+                left: 5px;
+            }
         }
     </style>
 </head>
@@ -86,112 +134,106 @@
             <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить</button>
             <div id="messages"></div>
             <div id="message-inputs">
-                <input type="text" id="messageText" autocomplete="off" placeholder="Сообщение..."/>
+                <input type="text" id="messageText" autocomplete="off" placeholder="Сообщение...">
                 <button onclick="sendMessage()">📝</button>
-                <input type="file" id="imageInput" accept="image/*" onchange="uploadImage()"/>
+                <input type="file" id="imageInput" accept="image/*" onchange="uploadImage()">
                 <button onclick="document.getElementById('imageInput').click()">🖼️</button>
             </div>
         </div>
-        
+
         <div id="users-panel">
             <h3>👥 Онлайн (<span id="userCount">0</span>)</h3>
             <ul id="user-list"></ul>
         </div>
     </div>
+
     <script>
-    const username = prompt("Как тебя зовут?");
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
+        const username = prompt("Как тебя зовут?") || "Guest";
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${encodeURIComponent(username)}`);
 
-    ws.onopen = function() {
-        console.log("WebSocket connected");
-    };
+        ws.onmessage = function(event) {
+            const data = event.data;
 
-    ws.onclose = function() {
-        console.log("WebSocket closed");
-    };
-
-    ws.onerror = function() {
-        console.log("WebSocket error");
-    };
-
-    ws.onmessage = function(event) {
-        const data = event.data;
-
-        if (data.startsWith("USERS:")) {
-            updateUsersList(data.slice(6));
-            return;
-        }
-
-        const parts = data.split("|||");
-        const messageDiv = document.createElement('div');
-        messageDiv.innerHTML = parts.join('<br>');
-        document.getElementById('messages').appendChild(messageDiv);
-        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-    };
-
-    function sendMessage() {
-        const input = document.getElementById("messageText");
-        if (input.value.trim() && ws.readyState === WebSocket.OPEN) {
-            ws.send(input.value.trim());
-            input.value = '';
-        } else if (ws.readyState !== WebSocket.OPEN) {
-            alert("Соединение с чатом не открыто. Обнови страницу.");
-        }
-    }
-
-    async function uploadImage() {
-        const fileInput = document.getElementById('imageInput');
-        const file = fileInput.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const response = await fetch('/upload', { method: 'POST', body: formData });
-            const result = await response.json();
-            if (result.image_b64 && ws.readyState === WebSocket.OPEN) {
-                ws.send('IMG:' + result.image_b64);
-            } else if (ws.readyState !== WebSocket.OPEN) {
-                alert("Соединение с чатом не открыто. Обнови страницу.");
+            if (data.startsWith("USERS:")) {
+                updateUsersList(data.slice(6));
+                return;
             }
-        } catch (e) {
-            alert('Ошибка загрузки картинки');
+
+            const parts = data.split("|||");
+            const wrapper = document.createElement("div");
+            wrapper.innerHTML = parts.join("<br>");
+            document.getElementById("messages").appendChild(wrapper);
+            document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+        };
+
+        ws.onclose = function() {
+            console.log("WebSocket closed");
+        };
+
+        function sendMessage() {
+            const input = document.getElementById("messageText");
+            const text = input.value.trim();
+            if (!text) return;
+
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(text);
+                input.value = "";
+            }
         }
 
-        fileInput.value = '';
-    }
+        async function uploadImage() {
+            const fileInput = document.getElementById("imageInput");
+            const file = fileInput.files[0];
+            if (!file) return;
 
-    function clearHistory() {
-        document.getElementById('messages').innerHTML = '';
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.send('/clear');
-        } else {
-            alert("Соединение с чатом не открыто. Обнови страницу.");
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const response = await fetch("/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.image_b64 && ws.readyState === WebSocket.OPEN) {
+                    ws.send("IMG:" + result.image_b64);
+                }
+            } catch (e) {
+                alert("Ошибка загрузки картинки");
+            }
+
+            fileInput.value = "";
         }
-    }
 
-    function updateUsersList(usersString) {
-        const users = usersString.split(',').filter(u => u.trim());
-        const userList = document.getElementById('user-list');
-        const userCount = document.getElementById('userCount');
+        function clearHistory() {
+            document.getElementById("messages").innerHTML = "";
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send("/clear");
+            }
+        }
 
-        userList.innerHTML = '';
-        users.forEach(user => {
-            const li = document.createElement('li');
-            li.textContent = user;
-            userList.appendChild(li);
+        function updateUsersList(usersString) {
+            const users = usersString.split(",").filter(u => u.trim());
+            const userList = document.getElementById("user-list");
+            const userCount = document.getElementById("userCount");
+
+            userList.innerHTML = "";
+            users.forEach(user => {
+                const li = document.createElement("li");
+                li.textContent = user;
+                userList.appendChild(li);
+            });
+
+            userCount.textContent = users.length;
+        }
+
+        document.getElementById("messageText").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
         });
-
-        userCount.textContent = users.length;
-    }
-
-    document.getElementById("messageText").addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
-            sendMessage();
-        }
-    });
-</script>
+    </script>
 </body>
 </html>
