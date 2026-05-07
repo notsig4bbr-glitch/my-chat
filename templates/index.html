@@ -7,16 +7,23 @@
             background: linear-gradient(135deg, #e3f2fd, #bbdefb);
             font-family: sans-serif;
             margin: 0;
-            display: flex;
-            justify-content: center;
+            padding: 20px;
             height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: calc(100vh - 40px);
         }
 
         #chat {
             background: white;
-            width: 90%;
+            flex: 1;
             max-width: 500px;
-            margin-top: 20px;
             padding: 20px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
@@ -25,10 +32,33 @@
             position: relative;
         }
 
+        #users-panel {
+            background: white;
+            width: 200px;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        #users-panel h3 {
+            margin-top: 0;
+            color: #2196f3;
+        }
+
+        #user-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        #user-list li {
+            padding: 5px 0;
+            font-size: 14px;
+        }
+
         #clearBtn {
             position: absolute;
-            top: 20px;
-            left: -100px;  
+            top: 10px;
+            left: -5px;
             background: #2196f3;
             color: white;
             border: none;
@@ -36,11 +66,9 @@
             padding: 8px 12px;
             cursor: pointer;
             font-size: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); 
-        }  
-        #clearBtn:hover {
-            background: #1976d2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
+        #clearBtn:hover { background: #1976d2; }
 
         #messages {
             flex-grow: 1;
@@ -48,7 +76,7 @@
             margin-bottom: 10px;
             border-bottom: 1px solid #eee;
             padding-bottom: 10px;
-            padding-left: 10px;
+            padding-left: 20px;
         }
 
         input {
@@ -68,12 +96,18 @@
     </style>
 </head>
 <body>
-    <div id="chat">
-        <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить</button>
+    <div class="container">
+        <div id="chat">
+            <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить</button>
+            <div id="messages"></div>
+            <input type="text" id="messageText" autocomplete="off"/>
+            <button onclick="sendMessage()">Отправить</button>
+        </div>
         
-        <div id="messages"></div>
-        <input type="text" id="messageText" autocomplete="off"/>
-        <button onclick="sendMessage()">Отправить</button>
+        <div id="users-panel">
+            <h3>👥 В сети (<span id="userCount">0</span>)</h3>
+            <ul id="user-list"></ul>
+        </div>
     </div>
     <script>
         const username = prompt("Как тебя зовут?");
@@ -81,12 +115,38 @@
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
         
         ws.onmessage = function(event) {
+            var data = event.data;
+            
+            // Обработка списка пользователей
+            if (data.startsWith("USERS:")) {
+                updateUsersList(data.slice(6)); // Убираем "USERS:"
+                return;
+            }
+            
+            // Обычное сообщение
             var messages = document.getElementById('messages');
             var message = document.createElement('div');
-            message.textContent = event.data;
+            message.textContent = data;
             messages.appendChild(message);
             messages.scrollTop = messages.scrollHeight;
         };
+
+        function updateUsersList(usersString) {
+            const users = usersString.split(',');
+            const userList = document.getElementById('user-list');
+            const userCount = document.getElementById('userCount');
+            
+            userList.innerHTML = '';
+            users.forEach(user => {
+                if (user.trim()) {
+                    var li = document.createElement('li');
+                    li.textContent = user;
+                    userList.appendChild(li);
+                }
+            });
+            
+            userCount.textContent = users.length;
+        }
 
         function sendMessage() {
             var input = document.getElementById("messageText");
@@ -98,7 +158,7 @@
 
         function clearHistory() {
             var messages = document.getElementById('messages');
-            messages.innerHTML = ''; 
+            messages.innerHTML = '';
             ws.send('/clear');
         }
 
