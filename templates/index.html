@@ -3,7 +3,6 @@
 <head>
     <title>Мой чат</title>
     <style>
-        /* Мягкий «телеграмный» фон */
         body {
             background: linear-gradient(135deg, #e3f2fd, #bbdefb);
             font-family: sans-serif;
@@ -70,7 +69,6 @@
 </head>
 <body>
     <div id="chat">
-        <!-- Кнопка очистки истории -->
         <button id="clearBtn" onclick="clearHistory()">🗑️ Очистить</button>
         
         <div id="messages"></div>
@@ -98,14 +96,12 @@
             }
         }
 
-        // Функция очистки истории
         function clearHistory() {
             var messages = document.getElementById('messages');
-            messages.innerHTML = ''; // Очищаем на фронте
-            ws.send('/clear'); // Отправляем команду серверу
+            messages.innerHTML = ''; 
+            ws.send('/clear');
         }
 
-        // Enter для отправки
         document.getElementById("messageText").addEventListener("keypress", function(event) {
             if (event.key === "Enter") {
                 sendMessage();
